@@ -64,11 +64,10 @@ class PrivateConvertMethodBuilder extends MethodBuilderBase {
          return (_map_UserDto$_To_User$((model as UserDto?)) as TARGET);
         }
       */
-      final ifCheckTypeMatchExpression = buildMatchingIfCondition(
-        mapping: mapping,
-        sourceTypeOfReference: sourceTypeOfReference,
-        targetTypeOfReference: targetTypeOfReference,
-        inIfExpression: (BlockBuilder()
+      Spec inIfExpression;
+      final converter = mapping.converter;
+      if(converter == null) {
+        inIfExpression = (BlockBuilder()
               ..statements.add(ifCheckForNull.code)
               ..addExpression(
                 refer(mapping.mappingMethodName(config: config))
@@ -80,7 +79,22 @@ class PrivateConvertMethodBuilder extends MethodBuilderBase {
                     .asA(MethodBuilderBase.targetTypeReference)
                     .returned,
               ))
-            .build(),
+            .build();
+      } else {
+        inIfExpression = Block.of([
+          refer(mapping.mappingMethodName(config: config))
+              .call([refer('model').asA(EmitterHelper.current.typeRefer(type: mapping.source))])
+              .asA(MethodBuilderBase.targetTypeReference)
+              .returned.statement,
+        ]);
+      }
+
+      final ifCheckTypeMatchExpression = buildMatchingIfCondition(
+        mapping: mapping,
+        sourceTypeOfReference: sourceTypeOfReference,
+        targetTypeOfReference: targetTypeOfReference,
+        inIfExpression: inIfExpression,
+        onlyExactMatch: mapping.converter != null,
       );
 
       block.statements.add(ifCheckTypeMatchExpression.code);
