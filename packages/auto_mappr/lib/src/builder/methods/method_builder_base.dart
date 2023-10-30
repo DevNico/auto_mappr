@@ -32,8 +32,15 @@ abstract class MethodBuilderBase {
     required DartType source,
     required DartType target,
     required AutoMapprConfig config,
-  }) =>
-      '_map_${source.toConvertMethodName()}_To_${target.toConvertMethodName()}';
+  }) {
+    final mapping = config.findMapping(source: source, target: target);
+
+    if(mapping != null && mapping.converter != null) {
+      return mapping.mappingMethodName(config: config);
+    }
+
+    return '_map_${source.toConvertMethodName()}_To_${target.toConvertMethodName()}';
+  }
 
   static String constructNullableConvertMethodName({
     required DartType source,
@@ -51,34 +58,55 @@ abstract class MethodBuilderBase {
   @protected
   Code buildBody();
 
-  // Generates code like:
-  /*
-     final sourceTypeOf = _typeOf<SOURCE>();
-     final targetTypeOf = _typeOf<TARGET>();
-     if ((sourceTypeOf == _typeOf<UserDto>() ||
-             sourceTypeOf == _typeOf<UserDto?>()) &&
-         (targetTypeOf == _typeOf<User>() || targetTypeOf == _typeOf<User?>())) {
-       return true
-      }
-  */
+  /// Generates code like:
+  ///
+  /// ```dart
+  /// final sourceTypeOf = _typeOf<SOURCE>();
+  /// final targetTypeOf = _typeOf<TARGET>();
+  /// if ((sourceTypeOf == _typeOf<UserDto>() || sourceTypeOf == _typeOf<UserDto?>()) &&
+  ///     (targetTypeOf == _typeOf<User>() || targetTypeOf == _typeOf<User?>())) {
+  ///    return true
+  ///  }
+  /// ```
+  ///
+  /// if [onlyExactMatch] is true, then the generated code will only
+  /// check for an exact type match. E.g.:
+  ///
+  /// ```dart
+  /// final sourceTypeOf = _typeOf<SOURCE>();
+  /// final targetTypeOf = _typeOf<TARGET>();
+  /// if (sourceTypeOf == _typeOf<UserDto>() && targetTypeOf == _typeOf<User>()) {
+  ///   return true
+  /// }
+  /// ```
   Expression buildMatchingIfCondition({
     required TypeMapping mapping,
     required Reference sourceTypeOfReference,
     required Reference targetTypeOfReference,
     required Spec inIfExpression,
+    required bool onlyExactMatch,
   }) {
     final sourceName = EmitterHelper.current.typeReferEmitted(type: mapping.source);
     final targetName = EmitterHelper.current.typeReferEmitted(type: mapping.target);
 
-    final modelIsTypeExpression = sourceTypeOfReference
-        .equalTo(refer('_typeOf<$sourceName>()'))
-        .or(sourceTypeOfReference.equalTo(refer('_typeOf<$sourceName?>()')));
+    Expression ifConditionExpression;
 
-    final outputExpression = targetTypeOfReference
-        .equalTo(refer('_typeOf<$targetName>()'))
-        .or(targetTypeOfReference.equalTo(refer('_typeOf<$targetName?>()')));
+    if(onlyExactMatch) {
+      ifConditionExpression = sourceTypeOfReference
+          .equalTo(refer('_typeOf<$sourceName>()'))
+          .and(targetTypeOfReference.equalTo(refer('_typeOf<$targetName>()')));
+    } else {
+      final modelIsTypeExpression = sourceTypeOfReference
+          .equalTo(refer('_typeOf<$sourceName>()'))
+          .or(sourceTypeOfReference.equalTo(refer('_typeOf<$sourceName?>()')));
 
-    final ifConditionExpression = modelIsTypeExpression.bracketed().and(outputExpression.bracketed());
+      final outputExpression = targetTypeOfReference
+          .equalTo(refer('_typeOf<$targetName>()'))
+          .or(targetTypeOfReference.equalTo(refer('_typeOf<$targetName?>()')));
+
+      ifConditionExpression = modelIsTypeExpression
+          .bracketed().and(outputExpression.bracketed());
+    }
 
     return ifConditionExpression.ifStatement2(ifBody: inIfExpression);
   }

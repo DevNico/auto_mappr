@@ -1,8 +1,26 @@
-import 'package:auto_mappr_annotation/src/field.dart';
-import 'package:auto_mappr_annotation/src/type_converter.dart';
+import 'package:auto_mappr_annotation/auto_mappr_annotation.dart';
+import 'package:auto_mappr_annotation/src/converter_function.dart';
 
 /// Configured mapping from [SOURCE] to [TARGET].
-final class MapType<SOURCE, TARGET> {
+sealed class MapType<SOURCE, TARGET> {
+  /// Constructs mapping between [SOURCE] and [TARGET] types.
+  const factory MapType({
+    List<Field> fields,
+    List<TypeConverter<Object?, Object?>> converters,
+    Object? whenSourceIsNull,
+    String constructor,
+    bool ignoreFieldNull,
+    bool reverse,
+  }) = SimpleMapType<SOURCE, TARGET>;
+
+  /// Constructs mapping between [SOURCE] and [TARGET] types with custom mappr function.
+  const factory MapType.custom(
+    ConverterFunction<SOURCE, TARGET> converter,
+  ) = CustomMapType<SOURCE, TARGET>;
+}
+
+/// Configured mapping from [SOURCE] to [TARGET].
+final class SimpleMapType<SOURCE, TARGET> implements MapType<SOURCE, TARGET> {
   /// Configuration for [TARGET]'s fields.
   final List<Field> fields;
 
@@ -37,7 +55,7 @@ final class MapType<SOURCE, TARGET> {
   final bool reverse;
 
   /// Constructs mapping between [SOURCE] and [TARGET] types.
-  const MapType({
+  const SimpleMapType({
     this.fields = const [],
     this.converters = const [],
     this.whenSourceIsNull,
@@ -45,4 +63,14 @@ final class MapType<SOURCE, TARGET> {
     this.ignoreFieldNull,
     this.reverse = false,
   });
+}
+
+
+/// Configured mapping from [SOURCE] to [TARGET] with custom function.
+final class CustomMapType<SOURCE, TARGET> implements MapType<SOURCE, TARGET> {
+  /// Converter function to map from [SOURCE] to [TARGET].
+  final ConverterFunction<SOURCE, TARGET> converter;
+
+  /// Constructs mapping between [SOURCE] and [TARGET] types.
+  const CustomMapType(this.converter);
 }

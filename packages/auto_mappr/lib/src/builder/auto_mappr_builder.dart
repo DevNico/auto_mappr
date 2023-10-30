@@ -108,7 +108,7 @@ class AutoMapprBuilder {
       PrivateConvertMethodBuilder(config).buildMethod(),
 
       // Generate non-nullable mapping method.
-      for (final mapping in config.mappers)
+      for (final mapping in config.mappers.where((element) => element.converter == null))
         MappingMethodBuilder(
           config,
           mapping: mapping,

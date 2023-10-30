@@ -1,6 +1,8 @@
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:auto_mappr/src/builder/methods/method_builder_base.dart';
+import 'package:auto_mappr/src/extensions/executable_element_extension.dart';
+import 'package:auto_mappr/src/helpers/emitter_helper.dart';
 import 'package:auto_mappr/src/models/auto_mappr_config.dart';
 import 'package:auto_mappr/src/models/field_mapping.dart';
 import 'package:auto_mappr/src/models/type_converter.dart';
@@ -16,6 +18,7 @@ class TypeMapping extends Equatable {
   final Expression? whenSourceIsNullExpression;
   final String? constructor;
   final bool? ignoreFieldNull;
+  final ExecutableElement? converter;
 
   bool get isEnumMapping => source.element is EnumElement || target.element is EnumElement;
 
@@ -40,13 +43,22 @@ class TypeMapping extends Equatable {
     this.typeConverters = const [],
     this.whenSourceIsNullExpression,
     this.constructor,
+    this.converter,
   });
 
-  String mappingMethodName({required AutoMapprConfig config}) => MethodBuilderBase.constructConvertMethodName(
+  String mappingMethodName({required AutoMapprConfig config}) {
+    final converter = this.converter;
+    if(converter != null) {
+      return EmitterHelper.current
+          .referEmitted(converter.referCallString, converter.library.identifier);
+    }
+
+    return MethodBuilderBase.constructConvertMethodName(
         source: source,
         target: target,
         config: config,
       );
+  }
 
   String nullableMappingMethodName({required AutoMapprConfig config}) =>
       MethodBuilderBase.constructNullableConvertMethodName(

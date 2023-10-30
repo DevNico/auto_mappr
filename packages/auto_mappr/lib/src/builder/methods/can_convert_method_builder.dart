@@ -52,6 +52,7 @@ class CanConvertMethodBuilder extends MethodBuilderBase implements CallableMetho
         sourceTypeOfReference: sourceTypeOfReference,
         targetTypeOfReference: targetTypeOfReference,
         inIfExpression: (BlockBuilder()..addExpression(literalTrue.returned)).build(),
+        onlyExactMatch: mapping.converter != null,
       );
 
       block.statements.add(ifCheckTypeMatchExpression.code);
